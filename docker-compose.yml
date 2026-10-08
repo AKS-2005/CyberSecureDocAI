@@ -1,0 +1,19 @@
+services:
+  cybersecuredocai:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: cybersecuredocai:latest
+    container_name: cybersecuredocai_app
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./data:/app/data
+      - ./app.py:/app/app.py
+      - ./index.html:/app/index.html
+    restart: unless-stopped
+    environment:
+      - PYTHONUNBUFFERED=1
+      - DATA_DIR=/app/data
+      - MODEL_PATH=/app/models/qwen2-1_5b-instruct-q4_k_m.gguf
+      - SECRET_KEY=cybersecuredocai-secret-key-vit-bhopal-2026

@@ -1,0 +1,812 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CyberSecureDocAI - Secure Offline RAG Document Analysis</title>
+    <meta name="description" content="Secure, fully offline, air-gapped Retrieval-Augmented Generation (RAG) chatbot for private document analysis." />
+    
+    <!-- Google Fonts: Inter & JetBrains Mono -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        cyber: {
+                            50: '#ecfdf5',
+                            100: '#d1fae5',
+                            400: '#34d399',
+                            500: '#10b981',
+                            600: '#059669',
+                            glow: '#00f2fe'
+                        },
+                        obsidian: {
+                            950: '#060911',
+                            900: '#0b101d',
+                            850: '#0f172a',
+                            800: '#1e293b',
+                            700: '#334155'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace']
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <style>
+        :root {
+            --accent-glow: rgba(16, 185, 129, 0.25);
+            --cyber-cyan: rgba(6, 182, 212, 0.25);
+        }
+        body {
+            background-color: #060911;
+            color: #f8fafc;
+            font-family: 'Inter', sans-serif;
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(16, 185, 129, 0.08) 0px, transparent 50%),
+                radial-gradient(at 100% 100%, rgba(6, 182, 212, 0.06) 0px, transparent 50%);
+            background-attachment: fixed;
+        }
+        
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0b101d;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #1e293b;
+            border-radius: 9999px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #334155;
+        }
+
+        .cyber-glass {
+            background: rgba(15, 23, 42, 0.72);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(51, 65, 85, 0.6);
+        }
+
+        .cyber-border-glow:focus-within {
+            border-color: #10b981;
+            box-shadow: 0 0 15px rgba(16, 185, 129, 0.2);
+        }
+
+        @keyframes pulse-subtle {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.6; transform: scale(0.96); }
+        }
+        .pulse-beacon {
+            animation: pulse-subtle 2.5s infinite ease-in-out;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col selection:bg-cyber-500/30 selection:text-cyber-400">
+
+    <!-- Top Navigation Header -->
+    <header class="sticky top-0 z-40 border-b border-obsidian-800 bg-obsidian-950/80 backdrop-blur-md">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="relative flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-cyber-500/20 to-cyan-500/20 border border-cyber-500/40 shadow-[0_0_15px_rgba(16,185,129,0.2)]">
+                    <svg class="w-6 h-6 text-cyber-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
+                    </svg>
+                    <span class="absolute -top-1 -right-1 w-2.5 h-2.5 bg-cyber-500 rounded-full pulse-beacon"></span>
+                </div>
+                <div>
+                    <div class="flex items-center gap-2">
+                        <span class="font-bold text-lg tracking-tight text-white">CyberSecure<span class="text-cyber-400">DocAI</span></span>
+                        <span class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-cyber-500/10 text-cyber-400 border border-cyber-500/20 font-semibold tracking-wider">OFFLINE v1.0</span>
+                    </div>
+                    <p class="text-xs text-slate-400 font-mono hidden sm:block">Private Document Intelligence &bull; Air-Gapped RAG</p>
+                </div>
+            </div>
+
+            <!-- Header Badges & Actions -->
+            <div class="flex items-center gap-3">
+                <div class="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-obsidian-900 border border-obsidian-800 text-xs font-mono text-slate-300">
+                    <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+                    <span class="text-emerald-400 font-semibold">Qwen2-1.5B</span>
+                    <span class="text-slate-600">|</span>
+                    <span>AVX2 CPU</span>
+                </div>
+
+                <div id="user-nav-actions" class="flex items-center gap-2">
+                    <!-- Populated dynamically via JS -->
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- App Main Container -->
+    <main id="app-viewport" class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8 flex flex-col">
+        <!-- Rendered by JS State -->
+    </main>
+
+    <!-- Footer -->
+    <footer class="border-t border-obsidian-850 py-3 bg-obsidian-950/60 text-center text-xs font-mono text-slate-500">
+        <div class="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row justify-between items-center gap-2">
+            <span>CyberSecureDocAI &bull; VIT Bhopal University Capstone Project</span>
+            <span class="text-slate-400 flex items-center gap-1.5">
+                <svg class="w-3.5 h-3.5 text-cyber-400 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                </svg>
+                Zero-Telemetry Local Privacy Assured
+            </span>
+        </div>
+    </footer>
+
+    <!-- App JavaScript Logic -->
+    <script>
+        const state = {
+            isLoggedIn: false,
+            user: null,
+            documents: [],
+            chatHistory: [],
+            isProcessingQuery: false,
+            authMode: 'login' // 'login' or 'register'
+        };
+
+        const viewport = document.getElementById('app-viewport');
+        const userNav = document.getElementById('user-nav-actions');
+
+        // Helper: format bytes
+        function formatBytes(bytes) {
+            if (!bytes || bytes === 0) return '0 B';
+            const k = 1024;
+            const sizes = ['B', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+        }
+
+        // --- RENDER FUNCTIONS ---
+        function renderNav() {
+            if (state.isLoggedIn && state.user) {
+                userNav.innerHTML = `
+                    <div class="flex items-center gap-3">
+                        <div class="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-obsidian-900 border border-obsidian-800">
+                            <div class="w-6 h-6 rounded-md bg-cyber-500/20 text-cyber-400 flex items-center justify-center font-bold text-xs uppercase">
+                                ${state.user.username.charAt(0)}
+                            </div>
+                            <span class="text-sm font-medium text-slate-200">${state.user.username}</span>
+                        </div>
+                        <button id="btn-logout" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/20 transition-all flex items-center gap-1.5">
+                            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+                            </svg>
+                            Logout
+                        </button>
+                    </div>
+                `;
+                document.getElementById('btn-logout').onclick = handleLogout;
+            } else {
+                userNav.innerHTML = `
+                    <div class="flex items-center gap-2">
+                        <span class="w-2.5 h-2.5 rounded-full bg-amber-400"></span>
+                        <span class="text-xs font-mono text-slate-400">Offline Session Locked</span>
+                    </div>
+                `;
+            }
+        }
+
+        function renderAuthView() {
+            viewport.innerHTML = `
+                <div class="max-w-md w-full mx-auto my-auto py-8">
+                    <div class="cyber-glass rounded-2xl p-8 shadow-2xl relative overflow-hidden">
+                        <div class="absolute -top-12 -right-12 w-40 h-40 bg-cyber-500/10 rounded-full blur-3xl pointer-events-none"></div>
+                        <div class="absolute -bottom-12 -left-12 w-40 h-40 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none"></div>
+
+                        <!-- Brand Badge -->
+                        <div class="text-center mb-6">
+                            <div class="inline-flex p-3 rounded-2xl bg-cyber-500/10 border border-cyber-500/30 text-cyber-400 mb-3 shadow-[0_0_20px_rgba(16,185,129,0.15)]">
+                                <svg class="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                                </svg>
+                            </div>
+                            <h1 class="text-2xl font-bold text-white tracking-tight">CyberSecureDocAI</h1>
+                            <p class="text-xs font-mono text-slate-400 mt-1">Air-Gapped Private Document Analysis Portal</p>
+                        </div>
+
+                        <!-- Tab Switcher -->
+                        <div class="grid grid-cols-2 p-1 bg-obsidian-950 rounded-xl mb-6 border border-obsidian-800">
+                            <button id="tab-login" class="py-2 text-xs font-semibold rounded-lg transition-all ${state.authMode === 'login' ? 'bg-cyber-500 text-obsidian-950 font-bold shadow' : 'text-slate-400 hover:text-white'}">
+                                Sign In
+                            </button>
+                            <button id="tab-register" class="py-2 text-xs font-semibold rounded-lg transition-all ${state.authMode === 'register' ? 'bg-cyber-500 text-obsidian-950 font-bold shadow' : 'text-slate-400 hover:text-white'}">
+                                Register
+                            </button>
+                        </div>
+
+                        <!-- Notification Box -->
+                        <div id="auth-alert" class="hidden mb-4 p-3 rounded-lg text-xs"></div>
+
+                        <!-- Form -->
+                        <form id="auth-form" class="space-y-4">
+                            ${state.authMode === 'register' ? `
+                                <div>
+                                    <label class="block text-xs font-medium text-slate-300 mb-1.5" for="input-username">Username</label>
+                                    <input id="input-username" name="username" type="text" required placeholder="analyst_user" 
+                                           class="w-full px-3.5 py-2.5 rounded-xl bg-obsidian-950/80 border border-obsidian-800 text-white placeholder-slate-600 text-sm focus:outline-none focus:border-cyber-500 focus:ring-1 focus:ring-cyber-500 transition-all font-mono" />
+                                </div>
+                            ` : ''}
+
+                            <div>
+                                <label class="block text-xs font-medium text-slate-300 mb-1.5" for="input-email">
+                                    ${state.authMode === 'register' ? 'Email Address' : 'Username or Email'}
+                                </label>
+                                <input id="input-email" name="email" type="${state.authMode === 'register' ? 'email' : 'text'}" required placeholder="user@company.local" 
+                                       class="w-full px-3.5 py-2.5 rounded-xl bg-obsidian-950/80 border border-obsidian-800 text-white placeholder-slate-600 text-sm focus:outline-none focus:border-cyber-500 focus:ring-1 focus:ring-cyber-500 transition-all font-mono" />
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-medium text-slate-300 mb-1.5" for="input-password">Password</label>
+                                <input id="input-password" name="password" type="password" required placeholder="••••••••" 
+                                       class="w-full px-3.5 py-2.5 rounded-xl bg-obsidian-950/80 border border-obsidian-800 text-white placeholder-slate-600 text-sm focus:outline-none focus:border-cyber-500 focus:ring-1 focus:ring-cyber-500 transition-all font-mono" />
+                            </div>
+
+                            <button type="submit" id="btn-auth-submit" 
+                                    class="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-cyber-500 to-emerald-400 text-obsidian-950 font-bold text-sm hover:opacity-95 shadow-[0_0_20px_rgba(16,185,129,0.3)] transition-all flex items-center justify-center gap-2">
+                                <span>${state.authMode === 'login' ? 'Unlock Secure Workspace' : 'Create Encrypted Vault'}</span>
+                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/>
+                                </svg>
+                            </button>
+                        </form>
+
+                        <div class="mt-6 pt-5 border-t border-obsidian-800 text-center">
+                            <p class="text-[11px] font-mono text-slate-500 flex items-center justify-center gap-1.5">
+                                <span class="w-1.5 h-1.5 rounded-full bg-cyber-500"></span>
+                                User documents strictly isolated via SHA-256 + SQLite
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            document.getElementById('tab-login').onclick = () => { state.authMode = 'login'; renderAuthView(); };
+            document.getElementById('tab-register').onclick = () => { state.authMode = 'register'; renderAuthView(); };
+            document.getElementById('auth-form').onsubmit = handleAuthSubmit;
+        }
+
+        function renderDashboardView() {
+            viewport.innerHTML = `
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 flex-1 h-[calc(100vh-140px)]">
+                    
+                    <!-- Left Column: Document Management & System Metrics (4 cols) -->
+                    <div class="lg:col-span-4 flex flex-col gap-4 h-full">
+                        
+                        <!-- Upload Dropzone Card -->
+                        <div class="cyber-glass rounded-2xl p-5 border border-obsidian-800 flex flex-col shrink-0 shadow-lg">
+                            <div class="flex items-center justify-between mb-3">
+                                <h2 class="text-sm font-semibold text-white flex items-center gap-2">
+                                    <svg class="w-4 h-4 text-cyber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
+                                    </svg>
+                                    Document Ingestion
+                                </h2>
+                                <span class="text-[10px] font-mono bg-cyber-500/10 text-cyber-400 px-2 py-0.5 rounded-full border border-cyber-500/20">PDF &bull; TXT &bull; MD</span>
+                            </div>
+
+                            <div id="dropzone" class="border-2 border-dashed border-obsidian-700 hover:border-cyber-500/60 rounded-xl p-5 text-center cursor-pointer transition-all bg-obsidian-950/40 hover:bg-cyber-500/5 group">
+                                <input type="file" id="file-input" multiple accept=".pdf,.txt,.md,.log" class="hidden" />
+                                <div class="w-10 h-10 mx-auto rounded-xl bg-obsidian-850 flex items-center justify-center text-slate-400 group-hover:text-cyber-400 group-hover:scale-110 transition-all mb-2">
+                                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+                                    </svg>
+                                </div>
+                                <p class="text-xs font-medium text-slate-300">Click or Drag & Drop Documents</p>
+                                <p class="text-[11px] text-slate-500 mt-1 font-mono">Parsed locally & indexed into FAISS</p>
+                            </div>
+
+                            <!-- Upload Progress Status -->
+                            <div id="upload-status" class="hidden mt-3 p-2.5 rounded-lg text-xs font-mono"></div>
+                        </div>
+
+                        <!-- Uploaded Documents List -->
+                        <div class="cyber-glass rounded-2xl p-5 border border-obsidian-800 flex-1 flex flex-col min-h-0 shadow-lg">
+                            <div class="flex items-center justify-between mb-3 shrink-0">
+                                <h3 class="text-sm font-semibold text-white flex items-center gap-2">
+                                    <svg class="w-4 h-4 text-cyan-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                                    </svg>
+                                    Isolated Vault Files
+                                </h3>
+                                <span id="doc-counter" class="text-xs font-mono text-slate-400 bg-obsidian-900 px-2 py-0.5 rounded-md border border-obsidian-800">
+                                    ${state.documents.length} Files
+                                </span>
+                            </div>
+
+                            <div id="documents-container" class="flex-1 overflow-y-auto space-y-2 pr-1">
+                                <!-- Populated dynamically -->
+                            </div>
+
+                            <!-- Vault Diagnostics Summary -->
+                            <div class="mt-4 pt-3 border-t border-obsidian-800 shrink-0 grid grid-cols-2 gap-2 text-center text-xs font-mono">
+                                <div class="bg-obsidian-950/60 p-2 rounded-lg border border-obsidian-800">
+                                    <span class="block text-[10px] text-slate-500">Vector Chunks</span>
+                                    <span id="stat-chunks" class="font-bold text-cyber-400">0</span>
+                                </div>
+                                <div class="bg-obsidian-950/60 p-2 rounded-lg border border-obsidian-800">
+                                    <span class="block text-[10px] text-slate-500">FAISS Index</span>
+                                    <span class="font-bold text-cyan-400">Isolated</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right Column: Interactive Chat Interface (8 cols) -->
+                    <div class="lg:col-span-8 flex flex-col h-full cyber-glass rounded-2xl border border-obsidian-800 overflow-hidden shadow-2xl">
+                        
+                        <!-- Chat Header -->
+                        <div class="px-6 py-3.5 border-b border-obsidian-800 bg-obsidian-950/50 flex items-center justify-between shrink-0">
+                            <div class="flex items-center gap-3">
+                                <div class="w-8 h-8 rounded-lg bg-cyber-500/20 border border-cyber-500/30 flex items-center justify-center text-cyber-400">
+                                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/>
+                                    </svg>
+                                </div>
+                                <div>
+                                    <h2 class="text-sm font-bold text-white tracking-wide">Analysis Session</h2>
+                                    <p class="text-[11px] text-slate-400 font-mono">Grounded strictly on uploaded documents</p>
+                                </div>
+                            </div>
+                            <button id="btn-clear-chat" class="px-3 py-1.5 rounded-lg text-xs font-mono text-slate-400 hover:text-slate-200 hover:bg-obsidian-800 border border-obsidian-800 transition-all flex items-center gap-1.5">
+                                <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                </svg>
+                                Clear Chat
+                            </button>
+                        </div>
+
+                        <!-- Chat Messages Canvas -->
+                        <div id="chat-stream" class="flex-1 overflow-y-auto p-6 space-y-5">
+                            <!-- Populated with messages -->
+                        </div>
+
+                        <!-- Suggested Query Prompts -->
+                        <div class="px-6 py-2 bg-obsidian-950/40 border-t border-obsidian-800/80 flex items-center gap-2 overflow-x-auto text-xs shrink-0">
+                            <span class="text-[11px] font-mono text-slate-500 uppercase tracking-wider shrink-0">Prompts:</span>
+                            <button class="quick-prompt px-2.5 py-1 rounded-md bg-obsidian-850 hover:bg-obsidian-800 border border-obsidian-750 text-slate-300 hover:text-white transition-all whitespace-nowrap">
+                                Summarize document findings
+                            </button>
+                            <button class="quick-prompt px-2.5 py-1 rounded-md bg-obsidian-850 hover:bg-obsidian-800 border border-obsidian-750 text-slate-300 hover:text-white transition-all whitespace-nowrap">
+                                Identify cybersecurity vulnerabilities
+                            </button>
+                            <button class="quick-prompt px-2.5 py-1 rounded-md bg-obsidian-850 hover:bg-obsidian-800 border border-obsidian-750 text-slate-300 hover:text-white transition-all whitespace-nowrap">
+                                Extract security policies & rules
+                            </button>
+                        </div>
+
+                        <!-- Chat Input Box -->
+                        <div class="p-4 bg-obsidian-950/80 border-t border-obsidian-800 shrink-0">
+                            <form id="chat-form" class="relative flex items-center">
+                                <input type="text" id="chat-input" placeholder="Query your documents with natural language..." 
+                                       class="w-full pl-5 pr-28 py-3.5 rounded-xl bg-obsidian-900 border border-obsidian-700 focus:border-cyber-500 focus:ring-1 focus:ring-cyber-500 text-sm text-white placeholder-slate-500 focus:outline-none transition-all" />
+                                
+                                <button type="submit" id="btn-send-chat" 
+                                        class="absolute right-2 top-2 bottom-2 px-4 rounded-lg bg-cyber-500 hover:bg-cyber-400 text-obsidian-950 font-bold text-xs flex items-center gap-1.5 shadow-[0_0_12px_rgba(16,185,129,0.3)] transition-all">
+                                    <span>Send</span>
+                                    <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/>
+                                    </svg>
+                                </button>
+                            </form>
+                            <div class="mt-2 flex items-center justify-between text-[11px] font-mono text-slate-500">
+                                <span>Zero-Leakage Local Generation &bull; Model: Qwen2-1.5B</span>
+                                <span>Press Enter to Submit</span>
+                            </div>
+                        </div>
+
+                    </div>
+
+                </div>
+            `;
+
+            setupDashboardEvents();
+            renderDocuments();
+            renderChatHistory();
+        }
+
+        function setupDashboardEvents() {
+            const dropzone = document.getElementById('dropzone');
+            const fileInput = document.getElementById('file-input');
+
+            dropzone.onclick = () => fileInput.click();
+            fileInput.onchange = (e) => handleFiles(e.target.files);
+
+            dropzone.ondragover = (e) => {
+                e.preventDefault();
+                dropzone.classList.add('border-cyber-500', 'bg-cyber-500/10');
+            };
+            dropzone.ondragleave = () => {
+                dropzone.classList.remove('border-cyber-500', 'bg-cyber-500/10');
+            };
+            dropzone.ondrop = (e) => {
+                e.preventDefault();
+                dropzone.classList.remove('border-cyber-500', 'bg-cyber-500/10');
+                if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                    handleFiles(e.dataTransfer.files);
+                }
+            };
+
+            document.getElementById('btn-clear-chat').onclick = handleClearChat;
+            document.getElementById('chat-form').onsubmit = handleChatSubmit;
+
+            document.querySelectorAll('.quick-prompt').forEach(btn => {
+                btn.onclick = () => {
+                    const input = document.getElementById('chat-input');
+                    input.value = btn.innerText.trim();
+                    input.focus();
+                };
+            });
+        }
+
+        function renderDocuments() {
+            const container = document.getElementById('documents-container');
+            const counter = document.getElementById('doc-counter');
+            const statChunks = document.getElementById('stat-chunks');
+            if (!container) return;
+
+            counter.innerText = `${state.documents.length} Files`;
+            let totalChunks = 0;
+            state.documents.forEach(d => totalChunks += (d.chunk_count || 0));
+            if (statChunks) statChunks.innerText = totalChunks;
+
+            if (state.documents.length === 0) {
+                container.innerHTML = `
+                    <div class="h-44 flex flex-col items-center justify-center text-center p-4 rounded-xl border border-dashed border-obsidian-800 text-slate-500">
+                        <svg class="w-8 h-8 text-slate-600 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
+                        </svg>
+                        <p class="text-xs font-medium">Vault is currently empty</p>
+                        <p class="text-[11px] font-mono mt-0.5">Upload a PDF or document above to begin indexing</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = state.documents.map(doc => `
+                <div class="flex items-center justify-between p-3 rounded-xl bg-obsidian-950/70 border border-obsidian-800 hover:border-obsidian-700 transition-all group">
+                    <div class="flex items-center gap-3 min-w-0 pr-2">
+                        <div class="w-8 h-8 rounded-lg bg-cyber-500/10 text-cyber-400 border border-cyber-500/20 flex items-center justify-center shrink-0">
+                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                            </svg>
+                        </div>
+                        <div class="min-w-0">
+                            <p class="text-xs font-semibold text-slate-200 truncate" title="${doc.filename}">${doc.filename}</p>
+                            <p class="text-[10px] font-mono text-slate-500">
+                                ${formatBytes(doc.file_size)} &bull; <span class="text-cyber-400">${doc.chunk_count || 0} chunks</span>
+                            </p>
+                        </div>
+                    </div>
+                    <button onclick="handleDeleteDocument('${doc.filename}')" title="Delete document" 
+                            class="p-1.5 rounded-lg text-slate-500 hover:text-red-400 hover:bg-red-500/10 transition-all opacity-80 group-hover:opacity-100">
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                        </svg>
+                    </button>
+                </div>
+            `).join('');
+        }
+
+        function renderChatHistory() {
+            const chatStream = document.getElementById('chat-stream');
+            if (!chatStream) return;
+
+            if (state.chatHistory.length === 0) {
+                chatStream.innerHTML = `
+                    <div class="h-full flex flex-col items-center justify-center text-center p-8 text-slate-400">
+                        <div class="w-14 h-14 rounded-2xl bg-cyber-500/10 border border-cyber-500/20 text-cyber-400 flex items-center justify-center mb-4 shadow-[0_0_20px_rgba(16,185,129,0.15)]">
+                            <svg class="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
+                            </svg>
+                        </div>
+                        <h3 class="text-base font-bold text-white mb-1">Welcome, ${state.user ? state.user.username : 'Analyst'}</h3>
+                        <p class="text-xs text-slate-400 max-w-md leading-relaxed">
+                            Your isolated, air-gapped document intelligence session is active. Ask questions about your uploaded documents or choose a suggested prompt below.
+                        </p>
+                    </div>
+                `;
+                return;
+            }
+
+            chatStream.innerHTML = state.chatHistory.map((item, index) => {
+                if (item.role === 'user') {
+                    return `
+                        <div class="flex items-start justify-end gap-3">
+                            <div class="max-w-xl p-4 rounded-2xl bg-gradient-to-r from-emerald-600/90 to-cyber-600/90 text-obsidian-950 font-medium text-sm shadow-md">
+                                ${escapeHtml(item.message)}
+                            </div>
+                            <div class="w-8 h-8 rounded-lg bg-cyber-500/20 text-cyber-400 border border-cyber-500/30 flex items-center justify-center font-bold text-xs uppercase shrink-0">
+                                ${state.user ? state.user.username.charAt(0) : 'U'}
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    return `
+                        <div class="flex items-start gap-3">
+                            <div class="w-8 h-8 rounded-lg bg-obsidian-850 text-cyan-400 border border-cyan-500/30 flex items-center justify-center shrink-0">
+                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                                </svg>
+                            </div>
+                            <div class="max-w-2xl space-y-2">
+                                <div class="p-4 rounded-2xl bg-obsidian-900 border border-obsidian-800 text-slate-200 text-sm leading-relaxed shadow-md">
+                                    ${formatBotReply(item.message)}
+                                </div>
+                                ${item.sources && item.sources.length > 0 ? `
+                                    <details class="text-xs text-slate-400 bg-obsidian-950/70 border border-obsidian-800 rounded-xl p-2.5">
+                                        <summary class="cursor-pointer font-mono text-[11px] text-cyber-400 hover:text-cyber-300 font-semibold select-none flex items-center gap-1.5">
+                                            <span>&#9656; Verified Retrieved Sources (${item.sources.length})</span>
+                                            ${item.latency ? `<span class="text-slate-500 ml-auto font-mono text-[10px]">Latency: ${item.latency}</span>` : ''}
+                                        </summary>
+                                        <div class="mt-2.5 space-y-2 border-t border-obsidian-800 pt-2 font-mono text-[11px]">
+                                            ${item.sources.map((s, si) => `
+                                                <div class="p-2 rounded bg-obsidian-900/80 border border-obsidian-850">
+                                                    <span class="text-cyan-400 font-semibold">[#${si+1}] ${escapeHtml(s.source)}</span>
+                                                    <p class="text-slate-400 mt-1 italic text-[10px] leading-relaxed">"${escapeHtml(s.snippet)}"</p>
+                                                </div>
+                                            `).join('')}
+                                        </div>
+                                    </details>
+                                ` : ''}
+                            </div>
+                        </div>
+                    `;
+                }
+            }).join('');
+
+            chatStream.scrollTop = chatStream.scrollHeight;
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        }
+
+        function formatBotReply(text) {
+            if (!text) return '';
+            let html = escapeHtml(text);
+            // Newlines to breaks
+            html = html.replace(/\n\n/g, '</p><p class="mt-2">').replace(/\n/g, '<br>');
+            return `<p>${html}</p>`;
+        }
+
+        // --- API INTERACTIONS ---
+        async function checkSession() {
+            try {
+                const res = await fetch('/api/check_session');
+                const data = await res.json();
+                state.isLoggedIn = data.logged_in;
+                state.user = data.user || null;
+                renderNav();
+                if (state.isLoggedIn) {
+                    renderDashboardView();
+                    await fetchDocuments();
+                    await fetchChatHistory();
+                } else {
+                    renderAuthView();
+                }
+            } catch (err) {
+                console.error("Session check error:", err);
+                renderAuthView();
+            }
+        }
+
+        async function handleAuthSubmit(e) {
+            e.preventDefault();
+            const form = e.target;
+            const alertBox = document.getElementById('auth-alert');
+            const submitBtn = document.getElementById('btn-auth-submit');
+
+            const payload = {
+                email: form.email.value.trim(),
+                password: form.password.value.trim()
+            };
+            if (state.authMode === 'register') {
+                payload.username = form.username.value.trim();
+            }
+
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = `<span>Processing...</span>`;
+
+            try {
+                const endpoint = state.authMode === 'register' ? '/api/register' : '/api/login';
+                const res = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+
+                if (!res.ok) {
+                    alertBox.className = "mb-4 p-3 rounded-lg text-xs bg-red-500/20 text-red-300 border border-red-500/30 font-mono";
+                    alertBox.innerText = data.message || "Authentication failed.";
+                    alertBox.classList.remove('hidden');
+                    return;
+                }
+
+                await checkSession();
+            } catch (err) {
+                alertBox.className = "mb-4 p-3 rounded-lg text-xs bg-red-500/20 text-red-300 border border-red-500/30 font-mono";
+                alertBox.innerText = "Network error communicating with local server.";
+                alertBox.classList.remove('hidden');
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = `<span>${state.authMode === 'login' ? 'Unlock Secure Workspace' : 'Create Encrypted Vault'}</span>`;
+            }
+        }
+
+        async function handleLogout() {
+            await fetch('/api/logout', { method: 'POST' });
+            state.isLoggedIn = false;
+            state.user = null;
+            state.documents = [];
+            state.chatHistory = [];
+            renderNav();
+            renderAuthView();
+        }
+
+        async function fetchDocuments() {
+            try {
+                const res = await fetch('/api/documents');
+                if (res.ok) {
+                    const data = await res.json();
+                    state.documents = data.documents || [];
+                    renderDocuments();
+                }
+            } catch (e) {
+                console.error("Failed fetching documents", e);
+            }
+        }
+
+        async function fetchChatHistory() {
+            try {
+                const res = await fetch('/api/chat/history');
+                if (res.ok) {
+                    const data = await res.json();
+                    state.chatHistory = data.history || [];
+                    renderChatHistory();
+                }
+            } catch (e) {
+                console.error("Failed fetching chat history", e);
+            }
+        }
+
+        async function handleFiles(files) {
+            if (!files || files.length === 0) return;
+            const statusBox = document.getElementById('upload-status');
+            statusBox.className = "mt-3 p-2.5 rounded-lg text-xs font-mono bg-cyber-500/10 text-cyber-400 border border-cyber-500/20";
+            statusBox.innerHTML = `<span class="animate-pulse">&#9679;</span> Ingesting and vectorizing ${files.length} file(s)...`;
+            statusBox.classList.remove('hidden');
+
+            const formData = new FormData();
+            for (let f of files) {
+                formData.append('files', f);
+            }
+
+            try {
+                const res = await fetch('/api/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.message);
+
+                statusBox.className = "mt-3 p-2.5 rounded-lg text-xs font-mono bg-emerald-500/20 text-emerald-300 border border-emerald-500/30";
+                statusBox.innerText = data.message;
+                await fetchDocuments();
+                setTimeout(() => statusBox.classList.add('hidden'), 4000);
+            } catch (err) {
+                statusBox.className = "mt-3 p-2.5 rounded-lg text-xs font-mono bg-red-500/20 text-red-300 border border-red-500/30";
+                statusBox.innerText = "Upload failed: " + err.message;
+            }
+        }
+
+        async function handleDeleteDocument(filename) {
+            if (!confirm(`Are you sure you want to permanently delete "${filename}" from your private vault?`)) return;
+            try {
+                const res = await fetch(`/api/delete/${encodeURIComponent(filename)}`, { method: 'DELETE' });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.message);
+                await fetchDocuments();
+            } catch (err) {
+                alert("Error deleting file: " + err.message);
+            }
+        }
+
+        async function handleClearChat() {
+            if (state.chatHistory.length === 0) return;
+            if (!confirm("Clear this conversation history?")) return;
+            try {
+                await fetch('/api/chat/history', { method: 'DELETE' });
+                state.chatHistory = [];
+                renderChatHistory();
+            } catch (err) {
+                console.error("Error clearing chat", err);
+            }
+        }
+
+        async function handleChatSubmit(e) {
+            e.preventDefault();
+            const input = document.getElementById('chat-input');
+            const message = input.value.trim();
+            if (!message || state.isProcessingQuery) return;
+
+            // Append user message immediately
+            state.chatHistory.push({ role: 'user', message });
+            renderChatHistory();
+            input.value = '';
+
+            // Append thinking placeholder
+            const chatStream = document.getElementById('chat-stream');
+            const thinkingId = 'thinking-' + Date.now();
+            chatStream.insertAdjacentHTML('beforeend', `
+                <div id="${thinkingId}" class="flex items-start gap-3">
+                    <div class="w-8 h-8 rounded-lg bg-obsidian-850 text-cyber-400 border border-cyber-500/30 flex items-center justify-center shrink-0">
+                        <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                        </svg>
+                    </div>
+                    <div class="p-3.5 rounded-2xl bg-obsidian-900 border border-obsidian-800 text-slate-400 text-xs font-mono flex items-center gap-2">
+                        <span class="w-2 h-2 rounded-full bg-cyber-400 animate-ping"></span>
+                        Retrieving relevant chunks & executing local LLM inference...
+                    </div>
+                </div>
+            `);
+            chatStream.scrollTop = chatStream.scrollHeight;
+            state.isProcessingQuery = true;
+
+            try {
+                const res = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message })
+                });
+                const data = await res.json();
+                
+                const thinkingElem = document.getElementById(thinkingId);
+                if (thinkingElem) thinkingElem.remove();
+
+                state.chatHistory.push({
+                    role: 'assistant',
+                    message: data.reply,
+                    sources: data.sources || [],
+                    latency: data.latency || null
+                });
+                renderChatHistory();
+
+            } catch (err) {
+                const thinkingElem = document.getElementById(thinkingId);
+                if (thinkingElem) thinkingElem.remove();
+
+                state.chatHistory.push({
+                    role: 'assistant',
+                    message: "Error processing query: " + err.message,
+                    sources: []
+                });
+                renderChatHistory();
+            } finally {
+                state.isProcessingQuery = false;
+            }
+        }
+
+        // Initialize application on load
+        window.addEventListener('DOMContentLoaded', checkSession);
+    </script>
+</body>
+</html>

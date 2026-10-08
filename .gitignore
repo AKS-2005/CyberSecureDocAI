@@ -1,0 +1,34 @@
+# Python artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+ENV/
+
+# Local databases and user data (Privacy & Security)
+data/
+*.db
+*.sqlite3
+
+# Downloaded AI Models (Too large for Git > 100MB; downloaded via Docker / download_models.py)
+models/
+*.gguf
+*.bin
+*.onnx
+
+# Environment & credentials
+.env
+.env.local
+
+# IDE & OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Docker build caches
+.docker/
